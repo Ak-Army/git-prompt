@@ -13,8 +13,11 @@ type GitStatus interface {
 func GetCurrentStatus() *gitStatus {
 	gS := &gitStatus{}
 	gS.waitGroup = &sync.WaitGroup{}
-	gS.waitGroup.Add(3)
-	go gS.getStatus()
+	err := gS.getStatus()
+	if err != nil {
+		return gS
+	}
+	gS.waitGroup.Add(2)
 	go gS.getStashCount()
 	go gS.getTag()
 	gS.waitGroup.Wait()
@@ -41,69 +44,67 @@ type gitStatus struct {
 // Format ...
 func (gS *gitStatus) Prompt(color color.Color) string {
 	if gS.branch == "" {
-		return "";
+		return ""
 	}
-	ret := color.Yellow("(")
+	ret := make([]string, 2)
+	ret[0] = color.Yellow("(")
 
 	// branch
 	if gS.detached {
-		ret += color.Red("%s", gS.branch)
+		ret[0] += color.Red("%s", gS.branch)
 	} else {
-		ret += color.Cyan("%s", gS.branch)
+		ret[0] += color.Cyan("%s", gS.branch)
 	}
 
 	if gS.tag != "" {
-		ret += color.Cyan("-%s ", gS.tag)
-	} else {
-		ret += " "
+		ret[0] += color.Cyan(" %s", gS.tag)
 	}
 
 	if gS.hasremote {
 		if gS.ahead > 0 {
-			ret += color.Green("↑%d", gS.ahead)
+			ret[1] += color.Green("↑%d", gS.ahead)
 		}
 		if gS.behind > 0 {
-			ret += color.Red("↓%d", gS.behind)
+			ret[1] += color.Red("↓%d", gS.behind)
 		}
 	}
 
 	if gS.staged > 0 {
-		ret += color.Blue("+%d", gS.staged)
+		ret[1] += color.Blue("+%d", gS.staged)
 	}
 
 	if gS.changed > 0 {
-		ret += color.Blue("△%d", gS.changed)
+		ret[1] += color.Blue("△%d", gS.changed)
 	}
 
 	if gS.untracked > 0 {
-		ret += color.Blue("?%d", gS.untracked)
+		ret[1] += color.Blue("?%d", gS.untracked)
 	}
 
 	if gS.conflicts > 0 {
-		ret += color.Red("!%d", gS.conflicts)
+		ret[1] += color.Red("!%d", gS.conflicts)
 	}
 
 	if gS.stashs > 0 {
-		ret += color.Green("|s%d", gS.stashs)
+		ret[1] += color.Green("|s%d", gS.stashs)
 	}
 
-	ret = strings.TrimSpace(ret)
-	ret += color.Yellow(")")
+	r := strings.TrimSpace(strings.Join(ret, " "))
+	r += color.Yellow(")")
 
-	return ret
+	return r
 }
 
-func (gS *gitStatus) getStatus() {
-	defer gS.waitGroup.Done()
-
+func (gS *gitStatus) getStatus() error {
 	lines, err := getLines("git", "status", "--porcelain", "--branch")
 	if err != nil {
-		return
+		return err
 	}
 
 	gS.waitGroup.Add(2)
 	go gS.parseBranchLine(lines[0])
 	go gS.collectChanges(lines[1:])
+	return nil
 }
 
 func (gS *gitStatus) getStashCount() {
@@ -126,7 +127,7 @@ func (gS *gitStatus) parseBranchLine(line string) {
 		gS.detached = true
 		gS.branch = "no branch"
 		hash, _, _ := communicate("git", "rev-parse", "--short", "HEAD")
-		gS.branch+= ":"+strings.TrimSpace(hash[0 : len(hash) - 1])
+		gS.branch += ":" + strings.TrimSpace(hash[0:len(hash)-1])
 	} else if strings.Contains(line, "...") {
 		gS.hasremote = true
 
@@ -181,6 +182,6 @@ func (gS *gitStatus) getTag() {
 	defer gS.waitGroup.Done()
 	tag, _, _ := communicate("git", "describe", "--tags", "--exact")
 	if tag != "" {
-		gS.tag =  strings.TrimSpace(tag[0 : len(tag)-1])
+		gS.tag = strings.TrimSpace(tag[0 : len(tag)-1])
 	}
 }
