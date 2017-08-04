@@ -4,6 +4,8 @@ import (
 	"github.com/Ak-Army/git-prompt/color"
 	"strings"
 	"sync"
+	"time"
+	"strconv"
 )
 
 type GitStatus interface {
@@ -96,6 +98,17 @@ func (gS *gitStatus) Prompt(color color.Color) string {
 }
 
 func (gS *gitStatus) getStatus() error {
+	gitDir, _, err := communicate("git", "rev-parse", "--show-toplevel")
+	if err != nil {
+		return err
+	}
+	lastFetch, _, err := communicate("stat", "-c", `%Y`, strings.TrimSpace(gitDir)+`/.git/FETCH_HEAD`)
+	if err == nil {
+		i, err := strconv.ParseInt(strings.TrimSpace(lastFetch), 10, 64)
+		if err == nil && time.Since(time.Unix(i, 0)).Hours() > 1 {
+			communicate("git", "fetch")
+		}
+	}
 	lines, err := getLines("git", "status", "--porcelain", "--branch")
 	if err != nil {
 		return err
