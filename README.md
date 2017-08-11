@@ -4,7 +4,7 @@ Informative and fast Git prompt for any shell (Bash, Zsh, and PowerShell).
 Inspired by zsh-git-prompt and ubnt-intrepid/go-git-prompt
 
 ## Example
-![git-prompt screenshot](https://github.com/Ak-Army/git-prompt/shot.png "git-prompt screenshot")
+![git-prompt screenshot](https://github.com/Ak-Army/git-prompt/blob/master/shot.png "git-prompt screenshot")
 
 ## Usage
 Bash:
