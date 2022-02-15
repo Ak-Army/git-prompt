@@ -1,3 +1,5 @@
+Archived, use instead of [promt-line](https://github.com/Ak-Army/prompt-line)
+
 # go-git-prompt
 
 Informative and fast Git prompt for any shell (Bash, Zsh, and PowerShell). 
